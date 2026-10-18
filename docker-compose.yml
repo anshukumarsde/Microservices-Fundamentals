@@ -1,0 +1,80 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: app
+      RABBITMQ_DEFAULT_PASS: app
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  catalog:
+    build:
+      context: .
+      dockerfile: services/catalog/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:h2:file:/app/data/catalog;AUTO_SERVER=TRUE
+    ports:
+      - "8001:8080"
+    volumes:
+      - catalog_data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  orders:
+    build:
+      context: .
+      dockerfile: services/orders/Dockerfile
+    environment:
+      CATALOG_URL: http://catalog:8080
+      RABBITMQ_HOST: rabbitmq
+      SPRING_DATASOURCE_URL: jdbc:h2:file:/app/data/orders;AUTO_SERVER=TRUE
+    ports:
+      - "8002:8080"
+    volumes:
+      - orders_data:/app/data
+    depends_on:
+      catalog:
+        condition: service_healthy
+      inventory:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  inventory:
+    build:
+      context: .
+      dockerfile: services/inventory/Dockerfile
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      SPRING_DATASOURCE_URL: jdbc:h2:file:/app/data/inventory;AUTO_SERVER=TRUE
+    ports:
+      - "8003:8080"
+    volumes:
+      - inventory_data:/app/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  catalog_data:
+  orders_data:
+  inventory_data:

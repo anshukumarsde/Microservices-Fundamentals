@@ -1,0 +1,6 @@
+.git
+.idea
+**/target
+**/data
+__pycache__
+*.pyc

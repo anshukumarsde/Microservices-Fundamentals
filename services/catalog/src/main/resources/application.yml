@@ -1,0 +1,13 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: catalog
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/catalog;AUTO_SERVER=TRUE}
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
